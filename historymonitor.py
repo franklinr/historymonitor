@@ -8,6 +8,8 @@ import matplotlib as mpl
 import subprocess
 import math
 import getopt
+import threading
+import queue
 
 # python historymonitor.py -w10 --height=10 -rCall,pwr,sm --interval=2
 
@@ -17,6 +19,7 @@ height=3
 samples = 60  # number of samples in history
 # column labels that will be reported
 useheader = ["CPU","pwr","gtemp","sm","mem"]
+numproc = 8 # number of processors reported by sar
 
 full_cmd_arguments = sys.argv
 argument_list = full_cmd_arguments[1:]
@@ -44,10 +47,6 @@ for current_argument, current_value in arguments:
 
 ## code for reading nvidia dmon
 def initGPUpipe(interval):
-    remotecmd = "nvidia-smi dmon -i 1 -o T -d "+str(interval)
-# connect to remote linux machine from remote mac using tunnel on localhost 
-#    remotecmd = "ssh user@remotelinux nvidia-smi dmon -i 1 -o T -d "+str(interval) 
-#    nvidiaproc = subprocess.Popen(["ssh","-p port","user@localhost",remotecmd ],
     nvidiaproc = subprocess.Popen(["nvidia-smi","dmon -i 1 -o T -d "+str(interval) ],
                            shell=True,stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
@@ -57,21 +56,20 @@ def initGPUpipe(interval):
 #    print(gpudata)
     return gpudata, nvidiaproc
 
-def getnewdatagpu():
+def getnewdatagpu(nvidiaproc,q):
     # read nvidia data skipping headers that are occasionally printed
     while True:
-        line = str( nvidiaproc.stdout.readline() ).split()
+        raw = nvidiaproc.stdout.readline() 
+        line = str( raw ).split()
         date = line[1]
         dateparts = date.split(":")
 #        print("gpudate",dateparts)
-        if len(dateparts) > 2 and dateparts[0] != "HH": break
-    line = line[1:]
-#    print("gpu",line)
-    return(line)
+        if len(dateparts) > 2 and dateparts[0] != "HH": 
+           line = line[1:]
+           q.put( line )
 
 ## code for reading cpu
 def initCPUpipe(interval):
-#    sarproc = subprocess.Popen(["ssh","-p port","user@localhost","ssh user@remotelinux  sar -P ALL -u "+str(interval)],
     sarproc = subprocess.Popen(["sar","-P ALL","-u "+str(interval)],
                            shell=True,stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
@@ -88,25 +86,44 @@ def initCPUpipe(interval):
             lastproc = line[2] # label for last cpu processor
     header = newline.split()
     header[1]="CPU"
-#    print(header)
+    print(header)
     cpudata = pd.DataFrame(columns=header)
     return cpudata, sarproc, lastproc
 
-def getnewdatacpu(lastproc):
+def getnewdatacpu(sarproc,q):
     newline = ""
+    date = ":"
     while True:
         line = str(sarproc.stdout.readline()).split()
 #        print("sar",line)
+        date = str(line[0])
         if len(line) > 3:
             newline = newline +" "+ line[3]
-            if line[2] == lastproc: break
-    return(newline.split())
+            if line[2] == lastproc: 
+                newparts = newline.split()
+                newparts[0] = date
+#                print("sar",newparts)
+                q.put( newparts )
 
 ## combine gpu and cpu headers
 cpudata, sarproc, lastproc = initCPUpipe(interval)
 gpudata, nvidiaproc = initGPUpipe(interval)
 data = pd.concat([cpudata,gpudata],axis=1)
-lendata = len(data.columns)
+cpudatalen = len(cpudata.columns)
+gpudatalen = len(gpudata.columns)
+
+# threads and queues are used to keep two pipes synchronized, otherwise there is a lag
+pa_q = queue.Queue()
+pb_q = queue.Queue()
+
+# start a pair of threads to read output from procedures A and B
+pa_t = threading.Thread(target=getnewdatacpu, args=(sarproc,pa_q))
+pb_t = threading.Thread(target=getnewdatagpu, args=(nvidiaproc,pb_q))
+pa_t.daemon = True
+pb_t.daemon = True
+pa_t.start()
+pb_t.start()
+
 
 ## figure parameters
 barcolor = ['r','b','g','m','y','c']
@@ -128,19 +145,22 @@ def fillMissingData(ys,samples):
         ysextra=[0]*(samples-len(ys))
         ys = ysextra + ys
     return ys
-    
+
+
 # this is the main animation function that updates the figure
 rind = 1  # index for row where new data is added
 def animate(i):
     global data
     global rind
 
-    c2 = getnewdatacpu(lastproc)
-    g2 = getnewdatagpu()
-    s2 = c2 + g2
-    s2 = [floatNA(x) for x in s2]
-    
-    if c2[0]!="#" and g2[0]!="#" and lendata == len(s2):
+    try:
+        c2 = pa_q.get(False) 
+        g2 = pb_q.get(False)
+        s2 = c2[-1*cpudatalen:] + g2[-1*gpudatalen:] # keep only the most recent output of queues
+        s2 = [floatNA(x) for x in s2]
+        print("s2 ",s2)
+      
+#      if c2[0]!="#" and g2[0]!="#" and lendata == len(s2):
         data.loc[rind] = s2  # add new data to end of dataframe
         rind = rind + 1
         data = data.tail(samples) # only keep last data rows
@@ -157,7 +177,7 @@ def animate(i):
             else:
                 # make stacked bar graph with different colors for each processor
                 prevy2 = [0]*len(ys)  
-                for j in range(8):
+                for j in range(numproc):
                     ys2 = data.iloc[:,2+j].astype('float').tolist()
                     ys2 = fillMissingData(ys2,samples)
                     axlist[i].bar(xs, ys2,bottom=prevy2) #, color=barcolor[j % len(barcolor)])
@@ -174,7 +194,9 @@ def animate(i):
             axlist[i].grid(True)
             axlist[i].set_ylim(ymin=-0.1,ymax=top)
             axlist[i].set_yticks(np.arange(top/4,top+5,top/4))
-            
+    except queue.Empty:
+        pass
+    
 # Set up plot to call animate() function periodically
 ani = animation.FuncAnimation(fig, animate,interval=1000*interval)
 plt.draw()
