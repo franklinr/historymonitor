@@ -158,7 +158,7 @@ def animate(i):
         g2 = pb_q.get(False)
         s2 = c2[-1*cpudatalen:] + g2[-1*gpudatalen:] # keep only the most recent output of queues
         s2 = [floatNA(x) for x in s2]
-        print("s2 ",s2)
+ #       print("s2 ",s2)
       
 #      if c2[0]!="#" and g2[0]!="#" and lendata == len(s2):
         data.loc[rind] = s2  # add new data to end of dataframe
