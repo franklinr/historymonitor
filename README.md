@@ -1,7 +1,6 @@
 # Historymonitor
-A program for monitoring remote gpus and cpus with a graphical history 
 
-A graphical history is useful when remotely monitoring gpus and cpus, in order to see when they are working or have finished/crashed.  In addition, I need to do this over a reverse tunnel to my mac with an addition ssh to my linux machine.  This is a simple python script that accomplishes this and can be easily adapted for any unix monitor command.
+A graphical history is useful when remotely monitoring gpus and cpus, in order to see whether they are working or have finished/crashed.  In addition, I needed to do this over a reverse tunnel to my mac with an addition ssh to my linux machine.  This is a simple python script that accomplishes this and can be easily adapted for any unix monitor command.
 
 ![](history.png)
 
