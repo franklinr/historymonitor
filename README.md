@@ -13,18 +13,19 @@ It also can monitor gpus using nvidia-smi and produces separate plots for power,
 - To install nvidia-smi:
   - sudo apt install nvidia-440       # or the appropriate driver for your system
 
-- To change the programs that provide input for the monitor, just change the codes below.  This code is for running sar on a remote linux machine from a remote mac over a tunnel from a local mac.
+
+- To change the programs that provide input for the monitor, just change the subprocess commands.
+```python
+    sarproc = subprocess.Popen(["sar","-P ALL -u "+str(interval)],
+                           shell=True,stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+```
+- For example, to ru sar on a remote linux machine from a remote mac over a tunnel from a local mac, replace the above code with this code.
 ```python
     # the remote command contacts a remote linux machine from a remote mac and run sar to get the cpu activity
     remotecmd = "ssh user@linuxmachine  sar -P ALL -u "+str(interval)
     # the remote mac is contacted from my home machine through a tunnel over PORT
     sarproc = subprocess.Popen(["ssh","-p PORT","user@localhost",remotecmd],
                            shell=False,stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
-```
-- If you are just monitoring your local machine, you can do something like this. shell may need to be True.
-```python
-    sarproc = subprocess.Popen(["sar","-P ALL -u "+str(interval)],
-                           shell=True,stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
 ```
