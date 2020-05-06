@@ -20,10 +20,10 @@ It also can monitor gpus using nvidia-smi and produces separate plots for power,
                            shell=True,stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE)
 ```
-- For example, to ru sar on a remote linux machine from a remote mac over a tunnel from a local mac, replace the above code with this code.
+- For example, to run sar on a remote linux machine from a remote machine over a tunnel from a local machine, replace the above code with this code.
 ```python
     # the remote command contacts a remote linux machine from a remote mac and run sar to get the cpu activity
-    remotecmd = "ssh user@linuxmachine  sar -P ALL -u "+str(interval)
+    remotecmd = "ssh user@remotelinuxmachine  sar -P ALL -u "+str(interval)
     # the remote mac is contacted from my home machine through a tunnel over PORT
     sarproc = subprocess.Popen(["ssh","-p PORT","user@localhost",remotecmd],
                            shell=False,stdout=subprocess.PIPE,
