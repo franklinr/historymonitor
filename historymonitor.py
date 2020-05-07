@@ -14,8 +14,8 @@ import queue
 # python historymonitor.py -w10 --height=10 -rCall,pwr,sm --interval=2
 
 interval = 5  # seconds between updates
-width=6  #inches
-height=3
+width=4  #inches
+height=2
 samples = 60  # number of samples in history
 # column labels that will be reported
 useheader = ["CPU","pwr","gtemp","sm","mem"]
@@ -184,7 +184,7 @@ def animate(i):
                     prevy2 = [sum(x) for x in zip(ys2,prevy2)]
             
             axlist[i].set_xticklabels([])
-            axlist[i].tick_params(labelsize="x-small")
+            axlist[i].tick_params(labelsize="xx-small")
             axlist[i].text(1.005,0.5,useheader[i], horizontalalignment='left', verticalalignment='center', transform=axlist[i].transAxes)
             top = (math.floor(max(ys)/100)+1)*100
             if top < 100:
