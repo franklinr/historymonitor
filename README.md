@@ -1,6 +1,6 @@
 # History monitor
 
-A graphical history is useful when remotely monitoring gpus and cpus, in order to see whether they are working or have finished/crashed.  In addition, I needed to do this over a reverse tunnel to my mac with an addition ssh to my linux machine.  This is a simple python script that accomplishes this and can be easily adapted for any unix monitor command.
+A graphical history is useful when remotely monitoring gpus and cpus, in order to see whether they are working or have finished/crashed.  In addition, it can work over tunnels or ssh connections.  It is a simple python script can be easily adapted for any unix monitor command.
 
 ![](history2.png)
 
@@ -25,7 +25,7 @@ It also can monitor gpus using nvidia-smi and produces separate plots for power,
 ```
 - For example, to run sar on a remote linux machine from a remote machine over a tunnel from a local machine, replace the above code with this code.
 ```python
-    # the remote command contacts a remote linux machine from a remote mac and run sar to get the cpu activity
+    # the remote command contacts a remote linux machine from another remote machine and run sar to get the cpu activity
     remotecmd = "ssh user@remotelinuxmachine -f sar -P ALL -u "+str(interval)
     # the remote mac is contacted from my home machine through a tunnel over PORT
     sarproc = subprocess.Popen(["ssh","-p PORT","user@localhost",remotecmd],
