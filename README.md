@@ -1,6 +1,6 @@
 # History monitor
 
-A graphical history is useful when remotely monitoring gpus and cpus, in order to see whether they are working or have finished/crashed.  In addition, it can work over tunnels or ssh connections.  It is a simple python script can be easily adapted for any unix monitor command.
+A graphical history is useful when remotely monitoring gpus and cpus, in order to see whether they are working or have finished/crashed.  This is a simple python script that work over tunnels and can be easily adapted for any unix monitor command.
 
 ![](history2.png)
 
